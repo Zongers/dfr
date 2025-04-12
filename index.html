@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duplicate Follow-up Remover | Workflow</title>
+    <link rel="icon" href="https://i.ibb.co/W48rv8hd/icon.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #98cc4e;
+            --secondary: #fb0088;
+            --light: #FFFFFF;
+            --dark: #292929;
+            --bg: #F7F7F7;
+            --border: #e0e0e0;
+            --pink: #ffd6e7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .spreadsheet-container {
+            background: var(--light);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 1200px;
+            border: 1px solid rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 0.7rem 1.2rem;
+            border-radius: 6px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            position:relative;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: var(--dark);
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 1rem;
+            table-layout: fixed;
+            font-size: 0.85rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            text-align: left;
+            min-width: 100px;
+            word-wrap: break-word;
+        }
+
+        th {
+            background-color: rgba(152,204,78,0.1);
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            background-color: white;
+            min-height: 1.5em;
+        }
+
+        td.duplicate-cell {
+            background-color: #fff0f5;
+            color: #d23669;
+            font-weight: bold;
+        }
+
+        .paste-container {
+            position: relative;
+            width: 100%;
+            margin-bottom: 1.5rem;
+        }
+
+        .paste-area {
+            width: 100%;
+            height: 200px;
+            max-height: 300px;
+            padding: 1rem;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            font-family: monospace;
+            overflow-y: auto;
+            resize: vertical;
+            white-space: pre-wrap;
+        }
+
+        .paste-area:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .paste-icon {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: var(--primary);
+            color: white;
+            padding: 5px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .paste-icon:hover {
+            background: var(--secondary);
+        }
+
+        .output-container {
+            position: relative;
+            margin-top: 2rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1.5rem;
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stats-container {
+            background-color: #ffd6e7;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem auto;
+            max-width: 500px;
+            width: 100%;
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        .stats-row {
+            display: flex;
+            margin-bottom: 0.5rem;
+            align-items: baseline;
+        }
+
+        .stats-label {
+            flex: 1;
+        }
+
+        .stats-value {
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: #888;
+            font-size: 0.9rem;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+        .copy-tick {
+            position:absolute;
+            right: 0px;
+            top: 0px;
+            background-color: rgba(0,0,0,0.5);
+            border-radius: 100%;
+            padding: 4px;
+            color: white;
+            display: none;
+        }
+        
+        /* Switch styles */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .switch-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-user-check"></i> Duplicate Follow-up Remover</h1>
+        <p>Remove duplicate customer numbers keeping only the latest activation</p>
+    </div>
+
+    <div class="spreadsheet-container">
+        <div class="toolbar">
+            <button class="btn btn-primary" onclick="processData()">
+                <i class="fas fa-magic"></i> Process Data
+            </button>
+            <button class="btn btn-secondary" onclick="clearData()">
+                <i class="fas fa-trash-alt"></i> Clear All
+            </button>
+            <div class="switch-container">
+                <span class="switch-label">Show Duplicates Only</span>
+                <label class="switch">
+                    <input type="checkbox" id="duplicatesOnlySwitch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="paste-container">
+            <div class="paste-area" id="pasteArea" contenteditable="true" placeholder="Paste your Excel data here (with customer numbers in column A and activation dates in column D)..."></div>
+            <div class="paste-icon" onclick="pasteData()">
+                <i class="fas fa-paste"></i> Paste
+            </div>
+        </div>
+
+        <div id="statsContainer" class="stats-container">
+            <div class="stats-row">
+                <span class="stats-label">Total Records Processed:</span>
+                <span class="stats-value" id="totalRecords">0</span>
+            </div>
+            <div class="stats-row">
+                <span class="stats-label">Duplicate Records Found:</span>
+                <span class="stats-value" id="duplicateRecords">0</span>
+            </div>
+            <div class="stats-row">
+                <span class="stats-label">Unique Records Kept:</span>
+                <span class="stats-value" id="uniqueRecords">0</span>
+            </div>
+        </div>
+
+        <div class="output-container">
+            <div class="output-header">
+                <h3>Cleaned Data (Latest Activations Only)</h3>
+                <button class="btn btn-primary" onclick="copyProcessedData()">
+                    <i class="fas fa-copy"></i> Copy Data
+                    <span class="copy-tick"><i class="fas fa-check"></i></span>
+                </button>
+            </div>
+            <div id="tableContainer">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>CLI*</th>
+                            <th>Package</th>
+                            <th>Status/Follow</th>
+                            <th>Activation Date*</th>
+                            <th>Remarks</th>
+                            <th>Other Data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        © Workflow 2025-26 | Data is processed in your browser only (not saved to server)
+    </footer>
+
+    <script>
+        // State variables
+        let originalData = null;
+        let processedData = null;
+        let duplicateInfo = [];
+        let pasteHistory = [];
+        let historyPointer = -1;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('pasteArea').focus();
+            
+            // Set up undo functionality
+            const pasteArea = document.getElementById('pasteArea');
+            pasteArea.addEventListener('input', function() {
+                // Save to history
+                if (pasteArea.textContent !== (pasteHistory[historyPointer] || '')) {
+                    // If we're not at the end of history, truncate future history
+                    if (historyPointer < pasteHistory.length - 1) {
+                        pasteHistory = pasteHistory.slice(0, historyPointer + 1);
+                    }
+                    pasteHistory.push(pasteArea.textContent);
+                    historyPointer++;
+                }
+            });
+            
+            // Handle Ctrl+Z for undo
+            pasteArea.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'z') {
+                    e.preventDefault();
+                    undoPaste();
+                }
+            });
+            
+            // Handle duplicates only switch
+            document.getElementById('duplicatesOnlySwitch').addEventListener('change', function() {
+                if (processedData) {
+                    renderTable(processedData, duplicateInfo, this.checked);
+                }
+            });
+        });
+
+        function undoPaste() {
+            if (historyPointer > 0) {
+                historyPointer--;
+                document.getElementById('pasteArea').textContent = pasteHistory[historyPointer];
+            } else if (historyPointer === 0) {
+                document.getElementById('pasteArea').textContent = '';
+                historyPointer = -1;
+            }
+        }
+
+        async function pasteData() {
+            try {
+                const clipboardItems = await navigator.clipboard.read();
+                for (const clipboardItem of clipboardItems) {
+                    for (const type of clipboardItem.types) {
+                        if (type === 'text/plain') {
+                            const blob = await clipboardItem.getType(type);
+                            const text = await blob.text();
+                            
+                            // Get current selection/cursor position
+                            const pasteArea = document.getElementById('pasteArea');
+                            const selection = window.getSelection();
+                            const currentText = pasteArea.textContent;
+                            
+                            // Add separator if there's existing content
+                            const separator = currentText && !currentText.endsWith('\n') ? '\n' : '';
+                            
+                            if (!selection.isCollapsed) {
+                                // Replace selection
+                                const range = selection.getRangeAt(0);
+                                range.deleteContents();
+                                range.insertNode(document.createTextNode(separator + text));
+                            } else {
+                                // Append at cursor
+                                const cursorPos = selection.anchorOffset;
+                                pasteArea.textContent = currentText.slice(0, cursorPos) + separator + text + currentText.slice(cursorPos);
+                            }
+                            
+                            // Move cursor to end of pasted content
+                            const range = document.createRange();
+                            range.selectNodeContents(pasteArea);
+                            range.collapse(false);
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                            
+                            // Save to history
+                            pasteHistory.push(pasteArea.textContent);
+                            historyPointer++;
+                            return;
+                        }
+                    }
+                }
+                alert('No text data found in clipboard');
+            } catch (err) {
+                console.error('Failed to read clipboard:', err);
+                document.getElementById('pasteArea').focus();
+                alert('Please use Ctrl+V to paste your data into the input box');
+            }
+        }
+
+        function processData() {
+            const inputText = document.getElementById('pasteArea').textContent.trim();
+            if (!inputText) {
+                alert('Please paste your Excel data first');
+                return;
+            }
+
+            const rows = inputText.split(/\r\n|\n|\r/).filter(row => row.trim() !== '');
+            const tableData = rows.map(row => {
+                // Split by tab or comma, but handle quoted commas
+                const cells = [];
+                let currentCell = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < row.length; i++) {
+                    const char = row[i];
+                    
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if ((char === '\t' || char === ',') && !inQuotes) {
+                        cells.push(currentCell.trim());
+                        currentCell = '';
+                    } else {
+                        currentCell += char;
+                    }
+                }
+                cells.push(currentCell.trim());
+                
+                return cells.map(cell => cell.replace(/^"(.*)"$/, '$1'));
+            });
+
+            originalData = tableData;
+            const result = removeDuplicates(tableData);
+            processedData = result.processedData;
+            duplicateInfo = result.duplicateInfo;
+            
+            const showDuplicatesOnly = document.getElementById('duplicatesOnlySwitch').checked;
+            renderTable(processedData, duplicateInfo, showDuplicatesOnly);
+            showStats(result.stats);
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr || dateStr.trim() === '') return new Date(0); // Return epoch for empty dates
+            
+            // Try standard Date parsing first
+            const parsedDate = new Date(dateStr);
+            if (!isNaN(parsedDate.getTime())) return parsedDate;
+            
+            // Handle various date formats
+            const formats = [
+                { regex: /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/, parts: [1, 2, 3] }, // YYYY-MM-DD
+                { regex: /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/, parts: [3, 2, 1] }, // DD-MM-YYYY
+                { regex: /^(\d{1,2})[-/](\d{1,2})[-/](\d{2})$/, parts: [3, 2, 1] },  // DD-MM-YY
+                { regex: /^(\d{4})(\d{2})(\d{2})$/, parts: [1, 2, 3] },              // YYYYMMDD
+                { regex: /^(\d{2})(\d{2})(\d{4})$/, parts: [3, 2, 1] },              // DDMMYYYY
+                { regex: /^(\d{2})(\d{2})(\d{2})$/, parts: [3, 2, 1] }               // DDMMYY
+            ];
+
+            for (const format of formats) {
+                const match = dateStr.match(format.regex);
+                if (match) {
+                    let year = match[format.parts[0]];
+                    let month = match[format.parts[1]] - 1; // Months are 0-indexed
+                    let day = match[format.parts[2]];
+                    
+                    // Handle 2-digit years
+                    if (year.length === 2) {
+                        year = '20' + year;
+                    }
+                    
+                    const date = new Date(year, month, day);
+                    if (!isNaN(date.getTime())) {
+                        return date;
+                    }
+                }
+            }
+            
+            return new Date(0); // Return epoch if parsing fails
+        }
+
+        function removeDuplicates(data) {
+            if (data.length === 0) return { processedData: [], stats: {}, duplicateInfo: [] };
+
+            const customerMap = new Map();
+            let duplicateCount = 0;
+            let totalRecords = data.length > 1 ? data.length - 1 : 0;
+            const duplicateInfo = [];
+
+            // Detect if first row is a header
+            const hasHeader = data.length > 1 && 
+                             (data[0][0] && 
+                              (data[0][0].toLowerCase().includes('customer') || 
+                               data[0][0].toLowerCase().includes('number') || 
+                               data[0][0].toLowerCase().includes('cli')));
+            
+            const startRow = hasHeader ? 1 : 0;
+            totalRecords = hasHeader ? data.length - 1 : data.length;
+
+            // First pass to collect all customer numbers
+            const allCustomerNumbers = [];
+            for (let i = startRow; i < data.length; i++) {
+                const row = data[i];
+                if (row.length === 0) continue;
+                const customerNumber = row[0] || '';
+                if (customerNumber) {
+                    allCustomerNumbers.push(customerNumber);
+                }
+            }
+
+            // Find duplicate numbers
+            const duplicateNumbers = [];
+            const numberCounts = {};
+            allCustomerNumbers.forEach(num => {
+                numberCounts[num] = (numberCounts[num] || 0) + 1;
+            });
+            for (const num in numberCounts) {
+                if (numberCounts[num] > 1) {
+                    duplicateNumbers.push(num);
+                }
+            }
+
+            // Process each row to keep only the latest activation
+            for (let i = startRow; i < data.length; i++) {
+                const row = data[i];
+                if (row.length === 0) continue;
+
+                const customerNumber = row[0] || '';
+                if (!customerNumber) continue;
+
+                const activationDateStr = row.length > 3 ? row[3] : '';
+                const activationDate = parseDate(activationDateStr);
+                const isDuplicate = duplicateNumbers.includes(customerNumber);
+
+                if (!customerMap.has(customerNumber)) {
+                    // First time seeing this customer number
+                    customerMap.set(customerNumber, {
+                        row: row,
+                        date: activationDate,
+                        count: 1,
+                        isDuplicate: isDuplicate
+                    });
+                } else {
+                    // We've seen this customer before
+                    const existing = customerMap.get(customerNumber);
+                    existing.count++;
+                    duplicateCount++;
+
+                    // Decide whether to replace with current row
+                    if (activationDate.getTime() > existing.date.getTime()) {
+                        // Current row has a later date
+                        customerMap.set(customerNumber, {
+                            row: row,
+                            date: activationDate,
+                            count: existing.count,
+                            isDuplicate: true
+                        });
+                    }
+                    // Else keep the existing row
+                }
+            }
+
+            // Prepare the output data
+            const processedData = hasHeader ? [data[0]] : [];
+            const duplicateRows = [];
+
+            // Add all customer entries to the output
+            customerMap.forEach((value, key) => {
+                processedData.push(value.row);
+                if (value.isDuplicate) {
+                    duplicateRows.push(key);
+                }
+            });
+
+            return {
+                processedData: processedData,
+                stats: {
+                    totalRecords: totalRecords,
+                    duplicateCount: duplicateCount,
+                    uniqueRecords: customerMap.size
+                },
+                duplicateInfo: duplicateRows
+            };
+        }
+
+        function renderTable(data, duplicateInfo, showDuplicatesOnly = false) {
+            const table = document.getElementById('dataTable');
+            const tbody = table.querySelector('tbody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                // Add empty rows if no data
+                for (let i = 0; i < 3; i++) {
+                    const row = document.createElement('tr');
+                    for (let j = 0; j < 6; j++) {
+                        const td = document.createElement('td');
+                        td.innerHTML = '&nbsp;';
+                        row.appendChild(td);
+                    }
+                    tbody.appendChild(row);
+                }
+                return;
+            }
+
+            // Check if first row is a header
+            const hasHeader = data.length > 1 && 
+                            (data[0][0] && 
+                             (data[0][0].toLowerCase().includes('customer') || 
+                              data[0][0].toLowerCase().includes('number') || 
+                              data[0][0].toLowerCase().includes('cli')));
+
+            // Add rows to the table
+            data.forEach((rowData, rowIndex) => {
+                const isHeaderRow = hasHeader && rowIndex === 0;
+                const customerNumber = isHeaderRow ? null : rowData[0] || '';
+                const isDuplicate = !isHeaderRow && duplicateInfo.includes(customerNumber);
+
+                // Skip non-duplicates if "Show Duplicates Only" is enabled
+                if (showDuplicatesOnly && !isHeaderRow && !isDuplicate) {
+                    return;
+                }
+
+                const row = document.createElement('tr');
+
+                // Add cells to the row
+                for (let i = 0; i < 6; i++) {
+                    const cellValue = i < rowData.length ? rowData[i] : '';
+                    const td = document.createElement('td');
+                    td.textContent = cellValue;
+                    
+                    // Highlight duplicate rows
+                    if (isDuplicate) {
+                        td.classList.add('duplicate-cell');
+                    }
+                    
+                    row.appendChild(td);
+                }
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function showStats(stats) {
+            const statsContainer = document.getElementById('statsContainer');
+            document.getElementById('totalRecords').textContent = stats.totalRecords;
+            document.getElementById('duplicateRecords').textContent = stats.duplicateCount;
+            document.getElementById('uniqueRecords').textContent = stats.uniqueRecords;
+            statsContainer.style.display = 'block';
+        }
+
+        function clearData() {
+            if (confirm('Are you sure you want to clear all data?')) {
+                document.getElementById('pasteArea').textContent = '';
+                renderTable([]);
+                document.getElementById('statsContainer').style.display = 'none';
+                pasteHistory = [];
+                historyPointer = -1;
+                originalData = null;
+                processedData = null;
+                duplicateInfo = [];
+            }
+        }
+
+        function copyProcessedData() {
+            const table = document.getElementById('dataTable');
+            let text = '';
+            const showDuplicatesOnly = document.getElementById('duplicatesOnlySwitch').checked;
+            
+            table.querySelectorAll('tbody tr').forEach(row => {
+                const isDuplicateRow = row.querySelector('.duplicate-cell') !== null;
+                
+                // Skip non-duplicate rows if "Show Duplicates Only" is enabled
+                if (showDuplicatesOnly && !isDuplicateRow) return;
+                
+                const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+                if (cells[0] && cells[0] !== '&nbsp;' && cells[0] !== '') {
+                    text += cells.join('\t') + '\n';
+                }
+            });
+
+            if (!text.trim()) {
+                alert('No data to copy. Please process some data first.');
+                return;
+            }
+
+            navigator.clipboard.writeText(text).then(() => {
+                const tick = document.querySelector('.copy-tick');
+                tick.style.display = 'inline-block';
+                setTimeout(()=> {
+                    tick.style.display = 'none';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy table. Please try again.');
+            });
+        }
+
+        document.getElementById('pasteArea').addEventListener('paste', function(e) {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            const selection = window.getSelection();
+            const currentText = this.textContent;
+            
+            // Add separator if there's existing content
+            const separator = currentText && !currentText.endsWith('\n') ? '\n' : '';
+            
+            if (!selection.isCollapsed) {
+                // Replace selection
+                const range = selection.getRangeAt(0);
+                range.deleteContents();
+                range.insertNode(document.createTextNode(separator + text));
+            } else {
+                // Append at cursor
+                const cursorPos = selection.anchorOffset;
+                this.textContent = currentText.slice(0, cursorPos) + separator + text + currentText.slice(cursorPos);
+            }
+            
+            // Move cursor to end of pasted content
+            const range = document.createRange();
+            range.selectNodeContents(this);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // Save to history
+            pasteHistory.push(this.textContent);
+            historyPointer++;
+        });
+    </script>
+</body>
+</html>
